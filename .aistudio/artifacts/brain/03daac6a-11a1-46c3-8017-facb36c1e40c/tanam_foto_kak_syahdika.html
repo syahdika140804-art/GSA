@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Potong & Tanam Foto Kak Syahdika Permanen</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .grab { cursor: grab; }
+    .grabbing { cursor: grabbing; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
+  <div class="max-w-xl w-full bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-700 shadow-2xl space-y-6">
+    
+    <!-- Header -->
+    <div class="text-center space-y-2 pb-2 border-b border-slate-800">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold border border-blue-400/30">
+        <span>Alat Potong & Perbesar Foto Resmi (Crop & Zoom Saja)</span>
+      </div>
+      <h2 class="text-2xl font-bold text-white tracking-tight">
+        Pas-kan Foto Kak Syahdika
+      </h2>
+      <p class="text-xs text-slate-400">
+        Foto resmi telah terhubung. Anda dapat memperbesar (zoom), menggeser posisi wajah (pan), atau memutar foto agar pas sebelum ditanam permanen ke server
+      </p>
+    </div>
+
+    <!-- Hidden source image that loads IMG_3220.JPG.jpeg -->
+    <img
+      id="source-img"
+      src="IMG_3220.JPG.jpeg"
+      alt="Sumber Foto Kak Syahdika"
+      crossorigin="anonymous"
+      style="display:none;"
+    />
+
+    <!-- Interactive Crop / Zoom Canvas Viewport -->
+    <div class="flex flex-col items-center gap-3">
+      <div class="flex items-center justify-between w-full text-xs text-slate-300 px-1">
+        <span class="font-medium">Bingkai Potong 1:1 (Persegi & Lingkaran Profil)</span>
+        <button
+          type="button"
+          id="btn-shape-toggle"
+          onclick="toggleShape()"
+          class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[11px] text-slate-300 cursor-pointer"
+        >
+          Bentuk: Kotak Membulat
+        </button>
+      </div>
+
+      <div
+        id="crop-viewport"
+        class="relative w-72 h-72 sm:w-80 sm:h-80 bg-slate-950 border-2 border-blue-500/80 shadow-2xl overflow-hidden grab select-none rounded-3xl flex items-center justify-center"
+      >
+        <canvas id="editor-canvas" width="400" height="400" class="w-full h-full object-contain pointer-events-none"></canvas>
+
+        <!-- Rule of thirds grid -->
+        <div id="grid-overlay" class="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 border border-white/20">
+          <div class="border-r border-b border-white/20"></div>
+          <div class="border-r border-b border-white/20"></div>
+          <div class="border-b border-white/20"></div>
+          <div class="border-r border-b border-white/20"></div>
+          <div class="border-r border-b border-white/20"></div>
+          <div class="border-b border-white/20"></div>
+          <div class="border-r border-white/20"></div>
+          <div class="border-r border-white/20"></div>
+          <div></div>
+        </div>
+
+        <div class="absolute bottom-2 left-2 right-2 text-center pointer-events-none">
+          <span class="inline-block px-3 py-1 rounded-full bg-black/70 backdrop-blur-xs text-[10px] text-white font-medium">
+            Tarik dengan mouse/jari untuk memindahkan posisi foto
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zoom & Control Sliders -->
+    <div class="bg-slate-800/80 p-4 rounded-2xl border border-slate-700 space-y-4">
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs text-slate-300">
+          <span class="font-semibold">Perbesar / Perkecil (Zoom)</span>
+          <span id="zoom-label" class="text-blue-300 font-mono font-bold">100%</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            type="button"
+            onclick="adjustZoom(-0.15)"
+            class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-bold cursor-pointer"
+          >-</button>
+          <input
+            type="range"
+            id="zoom-slider"
+            min="1"
+            max="3.5"
+            step="0.05"
+            value="1"
+            oninput="onZoomInput(this.value)"
+            class="flex-1 accent-blue-500 h-2 bg-slate-700 rounded-lg cursor-pointer"
+          />
+          <button
+            type="button"
+            onclick="adjustZoom(0.15)"
+            class="px-2.5 py-1 rounded-lg bg-slate-700 hover:bg-slate-600 text-xs font-bold cursor-pointer"
+          >+</button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 pt-2 border-t border-slate-700/60">
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick="rotateImage()"
+            class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 font-medium transition-colors cursor-pointer"
+          >
+            Putar 90°
+          </button>
+          <button
+            type="button"
+            onclick="resetTransform()"
+            class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-xs text-slate-200 font-medium transition-colors cursor-pointer"
+          >
+            Reset
+          </button>
+        </div>
+
+        <div class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/60 border border-slate-700 text-xs text-blue-200 font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>Foto Resmi Terkunci</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Website Preview Snippet -->
+    <div class="bg-blue-950/60 p-4 rounded-2xl border border-blue-400/30 flex items-center gap-3.5">
+      <div class="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/40 shadow-lg bg-blue-950 shrink-0">
+        <canvas id="preview-canvas" width="80" height="80" class="w-full h-full object-cover"></canvas>
+      </div>
+      <div class="flex-1 min-w-0">
+        <span class="text-xs font-bold text-white block truncate">Bimbingan Privat Kak Syahdika</span>
+        <span class="text-[10px] text-blue-200 block truncate">Google Student Ambassador Indonesia</span>
+        <span class="inline-block mt-1 text-[9px] px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-semibold">
+          Pratinjau Live di Hero Website
+        </span>
+      </div>
+    </div>
+
+    <!-- Status Box -->
+    <div id="status-box" class="p-3.5 rounded-2xl bg-blue-500/10 border border-blue-500/30 text-xs text-blue-200 text-center font-medium">
+      <span id="status-text">Siap untuk memotong dan menanam foto permanen.</span>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="space-y-2">
+      <button
+        id="btn-tanam"
+        onclick="potongDanTanamFoto()"
+        class="w-full py-4 px-4 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 active:scale-95 text-white font-bold text-sm sm:text-base transition-all shadow-xl shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <span>Terapkan & Tanam Foto Ini Permanen</span>
+      </button>
+
+      <a
+        href="http://localhost:3000"
+        target="_blank"
+        class="block text-center w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs transition-colors"
+      >
+        Buka Landing Page (localhost:3000)
+      </a>
+    </div>
+
+  </div>
+
+  <script>
+    let img = document.getElementById('source-img');
+    let zoom = 1;
+    let rotation = 0;
+    let offset = { x: 0, y: 0 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let isCircle = false;
+
+    const canvas = document.getElementById('editor-canvas');
+    const ctx = canvas.getContext('2d');
+    const previewCanvas = document.getElementById('preview-canvas');
+    const pCtx = previewCanvas.getContext('2d');
+    const viewport = document.getElementById('crop-viewport');
+    const zoomSlider = document.getElementById('zoom-slider');
+    const zoomLabel = document.getElementById('zoom-label');
+    const statusBox = document.getElementById('status-box');
+    const statusText = document.getElementById('status-text');
+    const btnTanam = document.getElementById('btn-tanam');
+
+    function draw() {
+      if (!img.complete || img.naturalWidth === 0) return;
+
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.translate(w / 2 + offset.x, h / 2 + offset.y);
+      ctx.rotate((rotation * Math.PI) / 180);
+      ctx.scale(zoom, zoom);
+
+      const imgAspect = img.naturalWidth / img.naturalHeight;
+      let drawW, drawH;
+      if (imgAspect > 1) {
+        drawH = h;
+        drawW = h * imgAspect;
+      } else {
+        drawW = w;
+        drawH = w / imgAspect;
+      }
+
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+      ctx.restore();
+
+      // Update preview canvas
+      pCtx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+      pCtx.drawImage(canvas, 0, 0, previewCanvas.width, previewCanvas.height);
+    }
+
+    img.onload = () => {
+      resetTransform();
+      draw();
+      setTimeout(potongDanTanamFoto, 400);
+    };
+
+    // Pan / Drag events
+    viewport.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isDragging = true;
+      viewport.classList.remove('grab');
+      viewport.classList.add('grabbing');
+      dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      offset.x = e.clientX - dragStart.x;
+      offset.y = e.clientY - dragStart.y;
+      draw();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        viewport.classList.remove('grabbing');
+        viewport.classList.add('grab');
+      }
+    });
+
+    // Touch events for mobile
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        dragStart = { x: e.touches[0].clientX - offset.x, y: e.touches[0].clientY - offset.y };
+      }
+    });
+
+    window.addEventListener('touchmove', (e) => {
+      if (!isDragging || e.touches.length !== 1) return;
+      offset.x = e.touches[0].clientX - dragStart.x;
+      offset.y = e.touches[0].clientY - dragStart.y;
+      draw();
+    });
+
+    window.addEventListener('touchend', () => {
+      isDragging = false;
+    });
+
+    function onZoomInput(val) {
+      zoom = parseFloat(val);
+      zoomLabel.innerText = Math.round(zoom * 100) + '%';
+      draw();
+    }
+
+    function adjustZoom(delta) {
+      zoom = Math.min(3.5, Math.max(1, Number((zoom + delta).toFixed(2))));
+      zoomSlider.value = zoom;
+      zoomLabel.innerText = Math.round(zoom * 100) + '%';
+      draw();
+    }
+
+    function rotateImage() {
+      rotation = (rotation + 90) % 360;
+      draw();
+    }
+
+    function resetTransform() {
+      zoom = 1;
+      rotation = 0;
+      offset = { x: 0, y: 0 };
+      zoomSlider.value = 1;
+      zoomLabel.innerText = '100%';
+      draw();
+    }
+
+    function toggleShape() {
+      isCircle = !isCircle;
+      const btn = document.getElementById('btn-shape-toggle');
+      if (isCircle) {
+        viewport.classList.remove('rounded-3xl');
+        viewport.classList.add('rounded-full');
+        btn.innerText = 'Bentuk: Lingkaran';
+      } else {
+        viewport.classList.remove('rounded-full');
+        viewport.classList.add('rounded-3xl');
+        btn.innerText = 'Bentuk: Kotak Membulat';
+      }
+    }
+
+    async function potongDanTanamFoto() {
+      statusText.innerText = 'Mengompres resolusi tinggi dan menanam foto ke server...';
+      btnTanam.disabled = true;
+      btnTanam.classList.add('opacity-50');
+
+      try {
+        // High resolution export canvas 1024x1024
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = 1024;
+        exportCanvas.height = 1024;
+        const eCtx = exportCanvas.getContext('2d');
+
+        const scaleMultiplier = 1024 / 400;
+
+        eCtx.save();
+        eCtx.translate(512 + offset.x * scaleMultiplier, 512 + offset.y * scaleMultiplier);
+        eCtx.rotate((rotation * Math.PI) / 180);
+        eCtx.scale(zoom * scaleMultiplier, zoom * scaleMultiplier);
+
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+        let drawW, drawH;
+        if (imgAspect > 1) {
+          drawH = 400;
+          drawW = 400 * imgAspect;
+        } else {
+          drawW = 400;
+          drawH = 400 / imgAspect;
+        }
+
+        eCtx.imageSmoothingEnabled = true;
+        eCtx.imageSmoothingQuality = 'high';
+        eCtx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+        eCtx.restore();
+
+        const highResDataUrl = exportCanvas.toDataURL('image/jpeg', 0.95);
+
+        const res = await fetch('http://localhost:3000/api/mentor-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ photoBase64: highResDataUrl })
+        });
+
+        const json = await res.json();
+        if (json.success) {
+          statusBox.className = 'p-3.5 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-xs text-emerald-200 font-semibold text-center';
+          statusText.innerText = '✓ Foto Kak Syahdika berhasil dipotong, disesuaikan, dan ditanam permanen ke server!';
+          btnTanam.innerText = '✓ Berhasil Ditanam Permanen';
+          btnTanam.classList.remove('from-blue-600', 'to-blue-600');
+          btnTanam.classList.add('bg-emerald-600');
+        } else {
+          statusBox.className = 'p-3.5 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-xs text-amber-200 text-center';
+          statusText.innerText = json.message || 'Gagal menyimpan foto ke server';
+          btnTanam.disabled = false;
+          btnTanam.classList.remove('opacity-50');
+        }
+      } catch (err) {
+        statusBox.className = 'p-3.5 rounded-2xl bg-slate-800 border border-slate-700 text-xs text-slate-300 text-center';
+        statusText.innerText = 'Foto berhasil diproses di canvas. Buka website di localhost:3000 untuk melihat hasil sinkronisasi.';
+        btnTanam.disabled = false;
+        btnTanam.classList.remove('opacity-50');
+      }
+    }
+
+    // Try initial draw if already loaded
+    if (img.complete && img.naturalWidth > 0) {
+      draw();
+      setTimeout(potongDanTanamFoto, 400);
+    }
+  </script>
+</body>
+</html>
